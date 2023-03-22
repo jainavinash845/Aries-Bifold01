@@ -98,6 +98,7 @@ const Connection: React.FC<ConnectionProps> = ({ navigation, route }) => {
   )
 
   useEffect(() => {
+    console.log("connections",notificationRecord)
     if (notificationRecord) {
       switch (notificationRecord.type) {
         case 'CredentialRecord':

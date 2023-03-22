@@ -47,6 +47,7 @@ const CredentialDetails: React.FC<CredentialDetailsProps> = ({ navigation, route
   const { OCABundle, record } = useConfiguration()
 
   useEffect(() => {
+    console.log("CredentialsDeatils",agent)
     if (!agent) {
       dispatch({
         type: DispatchAction.ERROR_ADDED,
@@ -65,6 +66,7 @@ const CredentialDetails: React.FC<CredentialDetailsProps> = ({ navigation, route
   }, [])
 
   useEffect(() => {
+    console.log("CredentialsDeatils",credential)
     if (!credential) {
       dispatch({
         type: DispatchAction.ERROR_ADDED,

@@ -17,6 +17,7 @@ import { StyleSheet } from 'react-native'
 import { Config } from 'react-native-config'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Toast from 'react-native-toast-message'
+import { AppConsoleLogger } from 'services/logger'
 
 import LoadingIndicator from '../components/animated/LoadingIndicator'
 import { ToastType } from '../components/toast/BaseToast'
@@ -170,12 +171,15 @@ const Splash: React.FC = () => {
         }
 
         const newAgent = new Agent(options)
+        console.log("AgentOptions",options);
         const wsTransport = new WsOutboundTransport()
+        console.log("wsTransport",wsTransport);
         const httpTransport = new HttpOutboundTransport()
+        console.log("httpTranssport",httpTransport);
 
         newAgent.registerOutboundTransport(wsTransport)
         newAgent.registerOutboundTransport(httpTransport)
-
+        console.log("nwe Agent",newAgent);
         await newAgent.initialize()
         setAgent(newAgent)
         navigation.navigate(Stacks.TabStack as never)

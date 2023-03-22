@@ -99,8 +99,11 @@ const NotificationListItem: React.FC<NotificationListItemProps> = ({ notificatio
   }
 
   const detailsForNotificationType = async (notificationType: NotificationType): Promise<DisplayDetails> => {
+    console.log("notificationType",notificationType)
     return new Promise((resolve) => {
+      console.log("notificationType",notificationType)
       switch (notificationType) {
+        
         case NotificationType.CredentialOffer:
           resolve({
             title: t('CredentialOffer.NewCredentialOffer'),
@@ -145,6 +148,7 @@ const NotificationListItem: React.FC<NotificationListItemProps> = ({ notificatio
   }
 
   const setActionForNotificationType = (notificationType: NotificationType): void => {
+    console.log("notificationType",notificationType)
     switch (notificationType) {
       case NotificationType.CredentialOffer:
         onPress = () => {
@@ -215,6 +219,7 @@ const NotificationListItem: React.FC<NotificationListItemProps> = ({ notificatio
 
   useEffect(() => {
     detailsForNotificationType(notificationType).then((details) => {
+      console.log("notificationType",notificationType)
       setDetails(details)
     })
   }, [notificationType])

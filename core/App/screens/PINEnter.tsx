@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { StatusBar, Keyboard, StyleSheet, Text, Image, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Colors } from 'react-native/Libraries/NewAppScreen'
 
 import ButtonLoading from '../components/animated/ButtonLoading'
 import Button, { ButtonType } from '../components/buttons/Button'
@@ -92,6 +93,7 @@ const PINEnter: React.FC<PINEnterProps> = ({ setAuthenticated, usage = PINEntryU
   }
 
   const loadWalletCredentials = async () => {
+    console.log("loadWalletCredentials",getWalletCredentials.toString)
     if (usage === PINEntryUsage.PINCheck) {
       return
     }
@@ -99,6 +101,7 @@ const PINEnter: React.FC<PINEnterProps> = ({ setAuthenticated, usage = PINEntryU
     const creds = await getWalletCredentials()
     if (creds && creds.key) {
       // remove lockout notification
+      console.log("loadWalletCredentials",creds)
       dispatch({
         type: DispatchAction.LOCKOUT_UPDATED,
         payload: [{ displayNotification: false }],
@@ -115,6 +118,7 @@ const PINEnter: React.FC<PINEnterProps> = ({ setAuthenticated, usage = PINEntryU
   }
 
   useEffect(() => {
+    console.log("getWalletCred",getWalletCredentials)
     if (!store.preferences.useBiometry) {
       return
     }

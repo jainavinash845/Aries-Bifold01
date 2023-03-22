@@ -63,6 +63,7 @@ const CredentialOffer: React.FC<CredentialOfferProps> = ({ navigation, route }) 
   })
 
   useEffect(() => {
+    console.log("CredentialOfferStarted",agent)
     if (!agent) {
       dispatch({
         type: DispatchAction.ERROR_ADDED,
@@ -81,6 +82,7 @@ const CredentialOffer: React.FC<CredentialOfferProps> = ({ navigation, route }) 
   }, [])
 
   useEffect(() => {
+    console.log("Credentials",credential)
     if (!credential) {
       dispatch({
         type: DispatchAction.ERROR_ADDED,

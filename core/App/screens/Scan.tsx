@@ -29,10 +29,12 @@ const Scan: React.FC<ScanProps> = ({ navigation }) => {
   const handleInvitation = async (uri: string): Promise<void> => {
     try {
       const connectionRecord = await connectFromInvitation(uri, agent)
+      console.log("connectionRecord",connectionRecord)
       navigation.getParent()?.navigate(Stacks.ConnectionStack, {
         screen: Screens.Connection,
         params: { connectionId: connectionRecord.id },
       })
+      console.log("connectionId",connectionRecord.id)
     } catch (err: unknown) {
       try {
         const message = await receiveMessageFromUrlRedirect(uri, agent)
