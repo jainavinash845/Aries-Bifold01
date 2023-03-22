@@ -1,4 +1,5 @@
 import { useNavigation } from '@react-navigation/core'
+import { CommonActions } from '@react-navigation/native'
 import { StackNavigationProp } from '@react-navigation/stack'
 import React, { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -12,9 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
   findNodeHandle,
-  ScrollView,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import Icon from 'react-native-vector-icons/MaterialIcons'
 
 // eslint-disable-next-line import/no-named-as-default
@@ -22,6 +21,7 @@ import ButtonLoading from '../components/animated/ButtonLoading'
 import Button, { ButtonType } from '../components/buttons/Button'
 import PINInput from '../components/inputs/PINInput'
 import AlertModal from '../components/modals/AlertModal'
+import KeyboardView from '../components/views/KeyboardView'
 import { minPINLength } from '../constants'
 import { useAuth } from '../contexts/auth'
 import { useConfiguration } from '../contexts/configuration'
@@ -53,7 +53,7 @@ const PINCreate: React.FC<PINCreateProps> = ({ setAuthenticated }) => {
     title: '',
     message: '',
   })
-
+  const iconSize = 24
   const navigation = useNavigation<StackNavigationProp<AuthenticateStackParams>>()
   const [, dispatch] = useStore()
   const { t } = useTranslation()
@@ -68,11 +68,16 @@ const PINCreate: React.FC<PINCreateProps> = ({ setAuthenticated }) => {
   const createPINButtonRef = useRef<TouchableOpacity>()
 
   const style = StyleSheet.create({
-    container: {
+    screenContainer: {
       height: '100%',
       backgroundColor: ColorPallet.brand.primaryBackground,
       padding: 20,
+      justifyContent: 'space-between',
     },
+
+    // below used as helpful labels for views, no properties needed atp
+    contentContainer: {},
+    controlsContainer: {},
   })
 
   const passcodeCreate = async (PIN: string) => {
@@ -87,7 +92,12 @@ const PINCreate: React.FC<PINCreateProps> = ({ setAuthenticated }) => {
       })
 
       // TODO: Navigate back if in settings
-      navigation.navigate(Screens.UseBiometry)
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: Screens.UseBiometry }],
+        })
+      )
     } catch (e) {
       // TODO:(jl)
     }
@@ -116,13 +126,11 @@ const PINCreate: React.FC<PINCreateProps> = ({ setAuthenticated }) => {
     await passcodeCreate(PINOne)
   }
 
-  // const r: ?React.ElementRef<typeof View>
-
   return (
-    <SafeAreaView>
+    <KeyboardView>
       <StatusBar barStyle={StatusBarStyles.Light} />
-      <ScrollView>
-        <View style={[style.container]}>
+      <View style={style.screenContainer}>
+        <View style={style.contentContainer}>
           <Text style={[TextTheme.normal, { marginBottom: 16 }]}>
             <Text style={{ fontWeight: 'bold' }}>{t('PINCreate.RememberPIN')}</Text> {t('PINCreate.PINDisclaimer')}
           </Text>
@@ -154,9 +162,9 @@ const PINCreate: React.FC<PINCreateProps> = ({ setAuthenticated }) => {
                 return (
                   <View style={{ flexDirection: 'row' }} key={index}>
                     {validation.isInvalid ? (
-                      <Icon name="clear" size={24} color={ColorPallet.notification.errorIcon} />
+                      <Icon name="clear" size={iconSize} color={ColorPallet.notification.errorIcon} />
                     ) : (
-                      <Icon name="check" size={24} color={ColorPallet.notification.success} />
+                      <Icon name="check" size={iconSize} color={ColorPallet.notification.success} />
                     )}
                     <Text style={[TextTheme.normal, { paddingLeft: 4 }]}>
                       {t(`PINCreate.Helper.${validation.errorName}`)}
@@ -196,7 +204,7 @@ const PINCreate: React.FC<PINCreateProps> = ({ setAuthenticated }) => {
             />
           )}
         </View>
-        <View style={{ marginTop: 'auto', margin: 20 }}>
+        <View style={style.controlsContainer}>
           <Button
             title={t('PINCreate.CreatePIN')}
             testID={testIdWithKey('CreatePIN')}
@@ -211,8 +219,8 @@ const PINCreate: React.FC<PINCreateProps> = ({ setAuthenticated }) => {
             {!continueEnabled && <ButtonLoading />}
           </Button>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </KeyboardView>
   )
 }
 

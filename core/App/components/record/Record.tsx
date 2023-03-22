@@ -25,6 +25,7 @@ const Record: React.FC<RecordProps> = ({ header, footer, fields, hideFieldValues
 
   const styles = StyleSheet.create({
     linkContainer: {
+      ...ListItems.recordContainer,
       flexDirection: 'row',
       justifyContent: 'flex-end',
       paddingHorizontal: 25,
@@ -35,9 +36,11 @@ const Record: React.FC<RecordProps> = ({ header, footer, fields, hideFieldValues
       paddingVertical: 2,
     },
   })
+
   const resetShown = (): void => {
     setShown(fields.map(() => false))
   }
+
   useEffect(() => {
     resetShown()
   }, [])

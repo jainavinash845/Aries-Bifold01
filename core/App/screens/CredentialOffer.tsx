@@ -1,24 +1,27 @@
-import { CredentialExchangeRecord, CredentialMetadataKeys, CredentialPreviewAttribute } from '@aries-framework/core'
+import { CredentialMetadataKeys, CredentialPreviewAttribute } from '@aries-framework/core'
 import { useAgent, useCredentialById } from '@aries-framework/react-hooks'
 import { StackScreenProps } from '@react-navigation/stack'
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { StyleSheet, View, Text } from 'react-native'
+import { StyleSheet, View, Text, DeviceEventEmitter } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import RecordLoading from '../components/animated/RecordLoading'
 import Button, { ButtonType } from '../components/buttons/Button'
 import ConnectionAlert from '../components/misc/ConnectionAlert'
+import ConnectionImage from '../components/misc/ConnectionImage'
 import CredentialCard from '../components/misc/CredentialCard'
+import Record from '../components/record/Record'
+import { EventTypes } from '../constants'
 import { useConfiguration } from '../contexts/configuration'
 import { useNetwork } from '../contexts/network'
-import { DispatchAction } from '../contexts/reducers/store'
-import { useStore } from '../contexts/store'
 import { useTheme } from '../contexts/theme'
 import { DeclineType } from '../types/decline'
 import { BifoldError } from '../types/error'
 import { NotificationStackParams, Screens } from '../types/navigators'
+import { CardLayoutOverlay11, CredentialOverlay } from '../types/oca'
 import { Field } from '../types/record'
+import { isValidIndyCredential } from '../utils/credential'
 import { getCredentialConnectionLabel } from '../utils/helpers'
 import { testIdWithKey } from '../utils/testable'
 
@@ -35,18 +38,18 @@ const CredentialOffer: React.FC<CredentialOfferProps> = ({ navigation, route }) 
 
   const { agent } = useAgent()
   const { t, i18n } = useTranslation()
-  const [, dispatch] = useStore()
+  const { ListItems, ColorPallet } = useTheme()
+  const { assertConnectedNetwork } = useNetwork()
+  const { OCABundleResolver } = useConfiguration()
+
+  const [loading, setLoading] = useState<boolean>(true)
   const [buttonsVisible, setButtonsVisible] = useState(true)
   const [acceptModalVisible, setAcceptModalVisible] = useState(false)
+
+  const [overlay, setOverlay] = useState<CredentialOverlay<CardLayoutOverlay11>>({ presentationFields: [] })
+
   const credential = useCredentialById(credentialId)
   const credentialConnectionLabel = getCredentialConnectionLabel(credential)
-  const [fields, setFields] = useState<Field[]>([])
-  // This syntax is required for the jest mocks to work
-  // eslint-disable-next-line import/no-named-as-default-member
-  const [loading, setLoading] = React.useState<boolean>(true)
-  const { assertConnectedNetwork } = useNetwork()
-  const { ListItems, ColorPallet } = useTheme()
-  const { OCABundle, record } = useConfiguration()
 
   const styles = StyleSheet.create({
     headerTextContainer: {
@@ -65,59 +68,60 @@ const CredentialOffer: React.FC<CredentialOfferProps> = ({ navigation, route }) 
   useEffect(() => {
     console.log("CredentialOfferStarted",agent)
     if (!agent) {
-      dispatch({
-        type: DispatchAction.ERROR_ADDED,
-        payload: [
-          {
-            error: new BifoldError(
-              t('Error.Title1035'),
-              t('Error.Message1035'),
-              t('CredentialOffer.CredentialNotFound'),
-              1035
-            ),
-          },
-        ],
-      })
+      DeviceEventEmitter.emit(
+        EventTypes.ERROR_ADDED,
+        new BifoldError(t('Error.Title1035'), t('Error.Message1035'), t('CredentialOffer.CredentialNotFound'), 1035)
+      )
     }
   }, [])
 
   useEffect(() => {
     console.log("Credentials",credential)
     if (!credential) {
-      dispatch({
-        type: DispatchAction.ERROR_ADDED,
-        payload: [
-          {
-            error: new BifoldError(
-              t('Error.Title1035'),
-              t('Error.Message1035'),
-              t('CredentialOffer.CredentialNotFound'),
-              1035
-            ),
-          },
-        ],
-      })
+      DeviceEventEmitter.emit(
+        EventTypes.ERROR_ADDED,
+        new BifoldError(t('Error.Title1035'), t('Error.Message1035'), t('CredentialOffer.CredentialNotFound'), 1035)
+      )
     }
   }, [])
 
   useEffect(() => {
-    if (!(agent && credential)) {
+    if (!(credential && isValidIndyCredential(credential))) {
       return
     }
-    setLoading(true)
-    agent?.credentials.getFormatData(credential.id).then(({ offer, offerAttributes }) => {
+
+    const updateCredentialPreview = async () => {
+      const { ...formatData } = await agent?.credentials.getFormatData(credential.id)
+      const { offer, offerAttributes } = formatData
+
       credential.metadata.add(CredentialMetadataKeys.IndyCredential, {
         schemaId: offer?.indy?.schema_id,
         credentialDefinitionId: offer?.indy?.cred_def_id,
       })
+
       if (offerAttributes) {
         credential.credentialAttributes = [...offerAttributes.map((item) => new CredentialPreviewAttribute(item))]
       }
-      OCABundle.getCredentialPresentationFields(credential as CredentialExchangeRecord, i18n.language).then((fields) =>
-        setFields(fields)
-      )
-      setLoading(false)
-    })
+    }
+
+    const resolvePresentationFields = async () => {
+      const fields = await OCABundleResolver.presentationFields(credential, i18n.language)
+      return { fields }
+    }
+
+    /**
+     * FIXME: Formatted data needs to be added to the record in AFJ extensions
+     * For now the order here matters. The credential preview must be updated to
+     * add attributes (since these are not available in the offer).
+     * Once the credential is updated the presentation fields can be correctly resolved
+     */
+    setLoading(true)
+    updateCredentialPreview()
+      .then(() => resolvePresentationFields())
+      .then(({ fields }) => {
+        setOverlay({ ...overlay, presentationFields: fields })
+        setLoading(false)
+      })
   }, [credential])
 
   const handleAcceptPress = async () => {
@@ -130,10 +134,7 @@ const CredentialOffer: React.FC<CredentialOfferProps> = ({ navigation, route }) 
     } catch (err: unknown) {
       setButtonsVisible(true)
       const error = new BifoldError(t('Error.Title1024'), t('Error.Message1024'), (err as Error).message, 1024)
-      dispatch({
-        type: DispatchAction.ERROR_ADDED,
-        payload: [{ error }],
-      })
+      DeviceEventEmitter.emit(EventTypes.ERROR_ADDED, error)
     }
   }
 
@@ -147,6 +148,7 @@ const CredentialOffer: React.FC<CredentialOfferProps> = ({ navigation, route }) 
   const header = () => {
     return (
       <>
+        <ConnectionImage connectionId={credential?.connectionId} />
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerText} testID={testIdWithKey('HeaderText')}>
             <Text>{credentialConnectionLabel || t('ContactDetails.AContact')}</Text>{' '}
@@ -154,7 +156,9 @@ const CredentialOffer: React.FC<CredentialOfferProps> = ({ navigation, route }) 
           </Text>
         </View>
         {!loading && credential && (
-          <CredentialCard credential={credential} style={{ marginHorizontal: 15, marginBottom: 16 }} />
+          <View style={{ marginHorizontal: 15, marginBottom: 16 }}>
+            <CredentialCard credential={credential} />
+          </View>
         )}
       </>
     )
@@ -195,13 +199,10 @@ const CredentialOffer: React.FC<CredentialOfferProps> = ({ navigation, route }) 
       </View>
     )
   }
+
   return (
     <SafeAreaView style={{ flexGrow: 1 }} edges={['bottom', 'left', 'right']}>
-      {record({
-        header: header,
-        footer: footer,
-        fields: fields,
-      })}
+      <Record fields={overlay.presentationFields as Field[]} header={header} footer={footer} />
       <CredentialOfferAccept visible={acceptModalVisible} credentialId={credentialId} />
     </SafeAreaView>
   )
